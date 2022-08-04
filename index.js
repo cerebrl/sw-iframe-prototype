@@ -55,23 +55,21 @@ if (state && code) {
  * ========= ATTACH LISTENERS =======================
  */
 
-const fetchBtn = document.getElementById('fetchBtn');
+const fetchMockBtn = document.getElementById('fetchMockBtn');
+const fetchUserBtn = document.getElementById('fetchUserBtn');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const renewBtn = document.getElementById('renewBtn');
 
-fetchBtn.addEventListener('click', async (e) => {
+fetchMockBtn.addEventListener('click', async (e) => {
   await fetch('https://jsonplaceholder.typicode.com/todos');
 });
-loginBtn.addEventListener('click', async () => {
-  /**
-   * The key-value of `login: redirect` is what allows central-login.
-   * Passing no arguments or a key-value of `login: 'embedded'` means
-   * the app handles authentication locally.
-   */
+fetchUserBtn.addEventListener('click', async (e) => {
+  const user = await UserManager.getCurrentUser();
+  console.log(user);
+});
+loginBtn.addEventListener('click', async (e) => {
   await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
-  // const user = await UserManager.getCurrentUser();
-  // console.log(user);
 });
 logoutBtn.addEventListener('click', async (e) => {
   FRUser.logout();
@@ -79,8 +77,6 @@ logoutBtn.addEventListener('click', async (e) => {
 renewBtn.addEventListener('click', async (e) => {
   broadcast.postMessage({ type: 'REMOVE' });
   await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
-  // const user = await UserManager.getCurrentUser();
-  // showUser(user);
 });
 
 /**

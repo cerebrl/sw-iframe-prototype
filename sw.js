@@ -5,6 +5,16 @@
 let secret;
 let broadcast = new BroadcastChannel('fetchChannel');
 
+function formEncode(data) {
+  const pairs = [];
+  for (const k in data) {
+    if (data[k]) {
+      pairs.push(k + '=' + encodeURIComponent(data[k]));
+    }
+  }
+  return pairs.join('&');
+}
+
 // Listen to the response
 broadcast.onmessage = (event) => {
   console.log(event.data.type);
@@ -47,22 +57,20 @@ self.addEventListener('fetch', async (event) => {
     event.respondWith(
       fetch(
         new Request(event.request, {
-          headers: {
+          headers: new Headers({
             ...event.request.headers,
             Authorization: `Bearer ${secret}`,
-          },
+          }),
         })
       )
     );
   } else if (url.includes('token/revoke')) {
+    const body = await event.request.text()
     event.respondWith(
       fetch(
         new Request(event.request, {
-          body: {
-            ...event.request.body,
-            token: secret,
-          },
-        })
+          body: `${body}&token=${secret}`,
+        }),
       )
     );
   }
