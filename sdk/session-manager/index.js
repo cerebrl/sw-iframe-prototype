@@ -43,13 +43,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import Config from '../config/index';
-import { REQUESTED_WITH } from '../shared/constants';
-import { isOkOr4xx } from '../util/http';
-import { withTimeout } from '../util/timeout';
-import { ActionTypes } from '../config/enums';
-import middlewareWrapper from '../util/middleware';
-import { getEndpointPath, resolve } from '../util/url';
+import Config from '../config/index.js';
+import { REQUESTED_WITH } from '../shared/constants.js';
+import { isOkOr4xx } from '../util/http.js';
+import { withTimeout } from '../util/timeout.js';
+import { ActionTypes } from '../config/enums.js';
+import middlewareWrapper from '../util/middleware.js';
+import { getEndpointPath, resolve } from '../util/url.js';
 /**
  * Provides access to the session management API.
  */

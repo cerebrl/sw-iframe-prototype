@@ -54,15 +54,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import Config from '../config';
-import middlewareWrapper from '../util/middleware';
-import OAuth2Client, { allowedErrors, ResponseType } from '../oauth2-client';
-import TokenStorage from '../token-storage';
-import PKCE from '../util/pkce';
-import { withTimeout } from '../util/timeout';
-import { parseQuery } from '../util/url';
-import { ActionTypes } from '../config/enums';
-import { tokensWillExpireWithinThreshold } from './helpers';
+import Config from '../config/index.js';
+import middlewareWrapper from '../util/middleware.js';
+import OAuth2Client, { allowedErrors, ResponseType } from '../oauth2-client/index.js';
+import TokenStorage from '../token-storage/index.js';
+import PKCE from '../util/pkce.js';
+import { withTimeout } from '../util/timeout.js';
+import { parseQuery } from '../util/url.js';
+import { ActionTypes } from '../config/enums.js';
+import { tokensWillExpireWithinThreshold } from './helpers.js';
 var TokenManager = /** @class */ (function () {
     function TokenManager() {
     }
@@ -73,7 +73,7 @@ var TokenManager = /** @class */ (function () {
      * Supports both embedded authentication as well as external authentication via redirects
      *
      Example 1:
-  
+
      ```js
      const tokens = forgerock.TokenManager.getTokens({
        forceRenew: true, // If you want to get new tokens, despite existing ones
@@ -84,9 +84,9 @@ var TokenManager = /** @class */ (function () {
        },
      });
      ```
-  
+
      Example 2:
-  
+
      ```js
      const tokens = forgerock.TokenManager.getTokens({
        forceRenew: false, // Will immediately return stored tokens, if they exist
@@ -94,9 +94,9 @@ var TokenManager = /** @class */ (function () {
        support: 'modern', // Set globally or locally; `"modern"` will use native fetch
      });
      ```
-  
+
      Example 3:
-  
+
      ```js
      const tokens = forgerock.TokenManager.getTokens({
        query: {
@@ -229,7 +229,7 @@ var TokenManager = /** @class */ (function () {
                         window.sessionStorage.setItem(clientId, JSON.stringify(authorizeUrlOptions));
                         return [2 /*return*/, window.location.assign(authorizeUrl)];
                     case 19: return [4 /*yield*/, this.tokenExchange(options, { state: state, verifier: verifier })];
-                    case 20: 
+                    case 20:
                     /**
                      * Exchange authorization code for tokens
                      */

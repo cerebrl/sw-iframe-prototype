@@ -54,15 +54,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { ActionTypes } from '../config/enums';
-import Config from '../config/index';
-import TokenStorage from '../token-storage';
-import { isOkOr4xx } from '../util/http';
-import PKCE from '../util/pkce';
-import { withTimeout } from '../util/timeout';
-import { getEndpointPath, resolve, stringify } from '../util/url';
-import { ResponseType } from './enums';
-import middlewareWrapper from '../util/middleware';
+import { ActionTypes } from '../config/enums.js';
+import Config from '../config/index.js';
+import TokenStorage from '../token-storage/index.js';
+import { isOkOr4xx } from '../util/http.js';
+import PKCE from '../util/pkce.js';
+import { withTimeout } from '../util/timeout.js';
+import { getEndpointPath, resolve, stringify } from '../util/url.js';
+import { ResponseType } from './enums.js';
+import middlewareWrapper from '../util/middleware.js';
 var allowedErrors = {
     // AM error for consent requirement
     AuthenticationConsentRequired: 'Authentication or consent required',

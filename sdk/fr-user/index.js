@@ -43,10 +43,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import OAuth2Client from '../oauth2-client';
-import SessionManager from '../session-manager';
-import TokenManager from '../token-manager';
-import UserManager from '../user-manager';
+import OAuth2Client from '../oauth2-client/index.js';
+import SessionManager from '../session-manager/index.js';
+import TokenManager from '../token-manager/index.js';
+import UserManager from '../user-manager/index.js';
 /**
  * High-level API for logging a user in/out and getting profile information.
  */

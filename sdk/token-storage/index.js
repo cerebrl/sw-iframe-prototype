@@ -43,10 +43,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import Config from '../config/index';
-import IndexedDBWrapper from './indexed-db';
-import LocalStorageWrapper from './local-storage';
-import SessionStorageWrapper from './session-storage';
+import Config from '../config/index.js';
+import IndexedDBWrapper from './indexed-db.js';
+import LocalStorageWrapper from './local-storage.js';
+import SessionStorageWrapper from './session-storage.js';
 /**
  * Provides access to the token storage API.
  * The type of storage (localStorage, sessionStorage, etc) can be configured
@@ -79,11 +79,11 @@ var TokenStorage = /** @class */ (function () {
                     case 6:
                         if (!(tokenStore && tokenStore.get)) return [3 /*break*/, 8];
                         return [4 /*yield*/, tokenStore.get(clientId)];
-                    case 7: 
+                    case 7:
                     // User supplied token store
                     return [2 /*return*/, _b.sent()];
                     case 8: return [4 /*yield*/, LocalStorageWrapper.get(clientId)];
-                    case 9: 
+                    case 9:
                     // if tokenStore is undefined, default to localStorage
                     return [2 /*return*/, _b.sent()];
                 }
@@ -114,11 +114,11 @@ var TokenStorage = /** @class */ (function () {
                     case 6:
                         if (!(tokenStore && tokenStore.set)) return [3 /*break*/, 8];
                         return [4 /*yield*/, tokenStore.set(clientId, tokens)];
-                    case 7: 
+                    case 7:
                     // User supplied token store
                     return [2 /*return*/, _b.sent()];
                     case 8: return [4 /*yield*/, LocalStorageWrapper.set(clientId, tokens)];
-                    case 9: 
+                    case 9:
                     // if tokenStore is undefined, default to localStorage
                     return [2 /*return*/, _b.sent()];
                 }
@@ -149,11 +149,11 @@ var TokenStorage = /** @class */ (function () {
                     case 6:
                         if (!(tokenStore && tokenStore.remove)) return [3 /*break*/, 8];
                         return [4 /*yield*/, tokenStore.remove(clientId)];
-                    case 7: 
+                    case 7:
                     // User supplied token store
                     return [2 /*return*/, _b.sent()];
                     case 8: return [4 /*yield*/, LocalStorageWrapper.remove(clientId)];
-                    case 9: 
+                    case 9:
                     // if tokenStore is undefined, default to localStorage
                     return [2 /*return*/, _b.sent()];
                 }

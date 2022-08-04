@@ -44,7 +44,7 @@ import FRRecoveryCodes from './fr-recovery-codes';
 import FRUser from './fr-user';
 import FRWebAuthn, { WebAuthnOutcome, WebAuthnStepType, } from './fr-webauthn';
 import HttpClient from './http-client';
-import OAuth2Client, { ResponseType, } from './oauth2-client';
+import OAuth2Client, { ResponseType, } from './oauth2-client/index.js';
 import SessionManager from './session-manager';
 import TokenManager from './token-manager';
 import TokenStorage from './token-storage';

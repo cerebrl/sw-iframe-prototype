@@ -16,7 +16,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
-import { getRealmUrlPath } from '../util/realm';
+import { getRealmUrlPath } from '../util/realm.js';
 /**
  * Returns the base URL including protocol, hostname and any non-standard port.
  * The returned URL does not include a trailing slash.
