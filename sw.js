@@ -1,19 +1,9 @@
-/**
- * ========= SERVICE WORKER ========================
+/** ****************************************************
+ * SERVICE WORKER IMPLEMENTATION
  */
 
 let secret;
 let broadcast = new BroadcastChannel('fetchChannel');
-
-function formEncode(data) {
-  const pairs = [];
-  for (const k in data) {
-    if (data[k]) {
-      pairs.push(k + '=' + encodeURIComponent(data[k]));
-    }
-  }
-  return pairs.join('&');
-}
 
 // Listen to the response
 broadcast.onmessage = (event) => {
@@ -27,12 +17,7 @@ broadcast.onmessage = (event) => {
       secret = undefined;
       return;
     }
-    case 'GET': {
-      broadcast.postMessage({ token: secret });
-      return;
-    }
     default: {
-      // broadcast.postMessage({ token: secret });
       return;
     }
   }

@@ -1,5 +1,5 @@
-/**
- * ========= CONFIGURING THE SDK & LOGIN ============
+/** ****************************************************
+ * SDK CONFIGURATION
  */
 
 import Config from './sdk/config/index.js';
@@ -20,17 +20,21 @@ Config.set({
   realmPath: 'alpha',
   tokenStore: {
     async get(clientId) {
+      // We cannot get the tokens out of the service worker
+      // Currently we need to return an empty object so SDK methods don't crash
       return {};
     },
-    async remove(clientId) {},
+    async remove(clientId) {
+      broadcast.postMessage({ type: 'REMOVE' });
+    },
     async set(clientId, tokens) {
       broadcast.postMessage({ type: 'SET',  payload: tokens });
     },
   },
 });
 
-/**
- * ========= REDIRECT HANDLER =======================
+/** ****************************************************
+ * CENTRAL LOGIN REDIRECT HANDLER
  */
 
 /**
@@ -51,8 +55,28 @@ if (state && code) {
   location.replace('http://localhost:8000');
 }
 
-/**
- * ========= ATTACH LISTENERS =======================
+/** ****************************************************
+ * SERVICE WORKER REGISTRATION
+ */
+
+broadcast.onmessage = (event) => {
+  console.log(event.data);
+};
+
+const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      navigator.serviceWorker.register('sw.js', { type: 'module' });
+    } catch (error) {
+      console.error(`SW registration failed with ${error}`);
+    }
+  }
+};
+
+registerServiceWorker();
+
+/** ****************************************************
+ * ATTACH USER EVENT LISTENERS
  */
 
 const fetchMockBtn = document.getElementById('fetchMockBtn');
@@ -78,23 +102,3 @@ renewBtn.addEventListener('click', async (e) => {
   broadcast.postMessage({ type: 'REMOVE' });
   await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
 });
-
-/**
- * ========= SW REGISTRATION =========================
- */
-
-broadcast.onmessage = (event) => {
-  console.log(event.data);
-};
-
-const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      navigator.serviceWorker.register('sw.js', { type: 'module' });
-    } catch (error) {
-      console.error(`SW registration failed with ${error}`);
-    }
-  }
-};
-
-registerServiceWorker();
