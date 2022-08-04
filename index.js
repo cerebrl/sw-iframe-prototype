@@ -6,6 +6,8 @@ import Config from './sdk/config/index.js';
 import TokenManager from './sdk/token-manager/index.js';
 // import UserManager from './sdk/user-manager/index.js';
 
+const broadcast = new BroadcastChannel('fetchChannel');
+
 Config.set({
   clientId: 'WebOAuthClient',
   redirectUri: `${window.location.origin}`,
@@ -17,17 +19,14 @@ Config.set({
   realmPath: 'alpha',
 	tokenStore: {
 		async get(clientId) {
-			const promise = new Promise();
-			return promise.resolve();
+			return undefined;
 		},
 		async remove(clientId) {
-			const promise = new Promise();
-			return promise.resolve();
+			return undefined;
 		},
 		async set(clientId, tokens) {
-      console.log(tokens);
-			const promise = new Promise();
-			return promise.resolve();
+                  broadcast.postMessage({ type: 'SET',  payload: tokens })
+		  return undefined;
 		}
 	}
 });
@@ -41,6 +40,15 @@ const logout = async () => {
   }
 };
 
+const showUser = (user) => {
+  document.querySelector('#User pre').innerHTML = JSON.stringify(user, null, 2);
+  const panel = document.querySelector('#User');
+  panel.querySelector('.btn').addEventListener('click', () => {
+    logout();
+  });
+  showStep('User');
+};
+
 const authorize = async (code, state) => {
   /**
    *  When the user return to this app after successfully logging in,
@@ -49,7 +57,7 @@ const authorize = async (code, state) => {
    */
   await TokenManager.getTokens({ query: { code, state } });
   // const user = await UserManager.getCurrentUser();
-  showUser(user);
+  // showUser(user);
 };
 
 document.querySelector('#loginBtn').addEventListener('click', async () => {
@@ -60,14 +68,11 @@ document.querySelector('#loginBtn').addEventListener('click', async () => {
    */
   await TokenManager.getTokens({ login: 'redirect' });
   // const user = await UserManager.getCurrentUser();
-  showUser(user);
+  // showUser(user);
 });
 
 // document.querySelector('#forceRenewBtn').addEventListener('click', async () => {
-//   await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
-//   const user = await UserManager.getCurrentUser();
-//   showUser(user);
-// });
+//   // });
 
 /**
  * Check URL for query parameters
@@ -92,10 +97,10 @@ document.querySelector('#loginBtn').addEventListener('click', async () => {
 
 const secretForm = document.getElementById('secretForm');
 const fetchBtn  = document.getElementById('fetchData');
-const broadcast = new BroadcastChannel('fetchChannel');
+const renewBtn = document.getElementById('renewBtn')
 
 broadcast.onmessage = (event) => {
-	console.log(event.data);
+	console.log('on message received', event.data);
 };
 
 fetchBtn.addEventListener('click', async (e) => {
@@ -104,8 +109,15 @@ fetchBtn.addEventListener('click', async (e) => {
 
 secretForm.addEventListener('submit', (event) => {
   event.preventDefault();
-	const secret = event.target.children[1].value;
-  broadcast.postMessage(secret);
+  const secret = event.target.children[1].value;
+  broadcast.postMessage({ type: 'SET', payload: secret });
+});
+
+renewBtn.addEventListener('click', async (e) => {
+  broadcast.postMessage({ type: 'REMOVE' });
+  await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
+  // const user = await UserManager.getCurrentUser();
+  // showUser(user);
 });
 
 const registerServiceWorker = async () => {

@@ -7,11 +7,31 @@ let broadcast = new BroadcastChannel('fetchChannel');
 
 // Listen to the response
 broadcast.onmessage = (event) => {
-	secret = event.data;
+    console.log(event.data.type);
+    switch(event.data.type) { 
+      case 'SET': {
+        secret = event.data.payload.accessToken;
+        console.log('in sw', secret);
+        return;
+      }
+      case 'REMOVE': {
+        console.log('being removed');
+        secret = undefined;
+        return;
+      }
+      case 'GET': {
+        broadcast.postMessage({ token: secret });
+        return;
+      }
+      default: {
+        // broadcast.postMessage({ token: secret });
+        return;
+      }
+    }
 };
 
 self.addEventListener('install', (event) => {
-	console.log('INSTALL');
+  console.log('INSTALL');
   self.skipWaiting();
 });
 
@@ -25,6 +45,10 @@ self.addEventListener('activate', async (event) => {
 
 self.addEventListener('fetch', async (event) => {
 	if (event.request.url.includes('jsonplaceholder.typicode.com')) {
-		event.respondWith(new Response(`{ message: ${secret} }`));
+		event.respondWith(fetch(new Request(event.request, { 
+                  headers: { 
+                    Authorization: `Bearer ${secret}` 
+                  }
+                })));
 	}
 });
