@@ -54,5 +54,16 @@ self.addEventListener('fetch', async (event) => {
         })
       )
     );
+  } else if (url.includes('token/revoke')) {
+    event.respondWith(
+      fetch(
+        new Request(event.request, {
+          body: {
+            ...event.request.body,
+            token: secret,
+          },
+        })
+      )
+    );
   }
 });

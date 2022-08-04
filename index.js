@@ -20,14 +20,11 @@ Config.set({
   realmPath: 'alpha',
   tokenStore: {
     async get(clientId) {
-      return Promise.resolve();
+      return {};
     },
-    async remove(clientId) {
-      return Promise.resolve();
-    },
+    async remove(clientId) {},
     async set(clientId, tokens) {
-      broadcast.postMessage({ type: 'SET',  payload: tokens })
-      return Promise.resolve();
+      broadcast.postMessage({ type: 'SET',  payload: tokens });
     },
   },
 });
@@ -72,7 +69,7 @@ loginBtn.addEventListener('click', async () => {
    * Passing no arguments or a key-value of `login: 'embedded'` means
    * the app handles authentication locally.
    */
-  await TokenManager.getTokens({ login: 'redirect' });
+  await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
   // const user = await UserManager.getCurrentUser();
   // console.log(user);
 });
