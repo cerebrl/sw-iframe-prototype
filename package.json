@@ -1,0 +1,23 @@
+{
+  "name": "sw-iframe-prototype",
+  "version": "1.0.0",
+  "description": "This is a prototype to explore the idea of using a Service Worker for intercepting `fetch` requests and rerouting them through an [iframe with an alternative origin (Origin Isolation)](https://github.com/ForgeRock/appAuthHelper/blob/master/origin_isolation.md). By leveraging an iframe on an alternative origin, we are able to store the tokens using the standard Web Storage API while also keeping them completely inaccessible to the main application.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cerebrl/sw-prototype.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cerebrl/sw-prototype/issues"
+  },
+  "homepage": "https://github.com/cerebrl/sw-prototype#readme",
+  "dependencies": {
+    "@forgerock/javascript-sdk": "^4.0.0-beta.4",
+    "vite": "^4.3.5"
+  }
+}

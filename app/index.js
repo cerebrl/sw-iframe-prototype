@@ -34,10 +34,7 @@ navigator.serviceWorker.addEventListener('message', (event) => {
  * SDK CONFIGURATION
  */
 
-import Config from './sdk/config/index.js';
-import FRUser from './sdk/fr-user/index.js';
-import TokenManager from './sdk/token-manager/index.js';
-import UserManager from './sdk/user-manager/index.js';
+import { Config, FRUser, TokenManager, UserManager } from '@forgerock/javascript-sdk';
 
 Config.set({
   clientId: 'WebOAuthClient',
@@ -85,9 +82,9 @@ Config.set({
   },
 });
 
- /** ****************************************************
-  * ATTACH USER EVENT LISTENERS
-  */
+/** ****************************************************
+* ATTACH USER EVENT LISTENERS
+*/
 
 const fetchMockBtn = document.getElementById('fetchMockBtn');
 const fetchUserBtn = document.getElementById('fetchUserBtn');
@@ -111,13 +108,13 @@ logoutBtn.addEventListener('click', async (event) => {
   FRUser.logout();
 });
 
- /** ****************************************************
-  * CENTRAL LOGIN REDIRECT HANDLER
-  */
+/** ****************************************************
+* CENTRAL LOGIN REDIRECT HANDLER
+*/
 
- /**
-  * Check URL for query parameters
-  */
+/**
+* Check URL for query parameters
+*/
 const url = new URL(document.location);
 const params = url.searchParams;
 const code = params.get('code');
