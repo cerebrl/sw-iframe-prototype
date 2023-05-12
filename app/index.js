@@ -1,34 +1,34 @@
-/** ****************************************************
- * SERVICE WORKER REGISTRATION
+/** ***************************************************
+ * TOKEN VAULT CLIENT CONFIGURATION
  */
 
-const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      navigator.serviceWorker.register('sw.js', { type: 'module' });
-    } catch (error) {
-      console.error(`SW registration failed with ${error}`);
-    }
-  }
-};
+import { client } from '../token-vault';
 
-registerServiceWorker();
-
-/** ****************************************************
- * IFRAME HTTP PROXY SETUP
- */
-
-const identityProxyFrame = document.getElementById('identityProxyFrame');
-
-navigator.serviceWorker.addEventListener('message', (event) => {
-  if (event.data?.type === 'FETCH_RESOURCE') {
-    identityProxyFrame.contentWindow.postMessage(
-      { type: 'FETCH_RESOURCE', request: event.data.request },
-      '*',
-      [event.ports[0]]
-    );
-  }
+// Initialize the token vault client
+const register = client({
+  events: {
+    // fetch: 'FETCH_RESOURCE',
+    // remove: 'REMOVE_TOKENS',
+    // set: 'SET_TOKENS',
+  },
+  interceptor: {
+    file: 'interceptor.js',
+    type: 'module',
+  },
+  proxy: {
+    origin: 'http://localhost:9000',
+    url: 'http://localhost:9000',
+  },
 });
+
+// Register the interceptor]
+const interceptor = await register.interceptor();
+
+// Register the proxy
+const proxy = register.proxy(document.getElementById('token-vault'));
+
+// Register the token store replacement
+const storeReplacement = register.store();
 
 /** ****************************************************
  * SDK CONFIGURATION
@@ -45,49 +45,41 @@ Config.set({
     timeout: 3000,
   },
   realmPath: 'alpha',
-  tokenStore: {
-    get(clientId) {
-      // We cannot get the tokens out of the iframe
-      // Currently we need to return an empty object so SDK methods don't crash
-      return {};
-    },
-    remove(clientId) {
-      const proxyChannel = new MessageChannel();
-
-      return new Promise((resolve, reject) => {
-        identityProxyFrame.contentWindow.postMessage(
-          { type: 'REMOVE_TOKENS', clientId },
-          '*',
-          [proxyChannel.port2]
-        );
-        proxyChannel.port1.onmessage = (event) => {
-          resolve(event.data);
-        };
-      });
-    },
-    set(clientId, tokens) {
-      const proxyChannel = new MessageChannel();
-
-      return new Promise((resolve, reject) => {
-        identityProxyFrame.contentWindow.postMessage(
-          { type: 'SET_TOKENS', clientId, tokens },
-          '*',
-          [proxyChannel.port2]
-        );
-        proxyChannel.port1.onmessage = (event) => {
-          resolve(event.data);
-        };
-      });
-    },
-  },
+  tokenStore: storeReplacement,
 });
 
+
 /** ****************************************************
-* ATTACH USER EVENT LISTENERS
-*/
+ * CENTRAL LOGIN REDIRECT HANDLER
+ */
+
+/**
+ * Check URL for query parameters
+ */
+const url = new URL(document.location);
+const params = url.searchParams;
+const code = params.get('code');
+const state = params.get('state');
+
+/**
+ * If the URL has state and code as query parameters, then the user
+ * returned back here after successfully logging, so call authorize with
+ * the values
+ */
+if (state && code) {
+  await TokenManager.getTokens({ query: { code, state } });
+  location.replace('http://localhost:8000');
+}
+
+
+/** ****************************************************
+ * ATTACH USER EVENT LISTENERS
+ */
 
 const fetchMockBtn = document.getElementById('fetchMockBtn');
 const fetchUserBtn = document.getElementById('fetchUserBtn');
+const hasTokensBtn = document.getElementById('hasTokens');
+const refreshTokensBtn = document.getElementById('refreshTokens');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
@@ -100,6 +92,14 @@ fetchUserBtn.addEventListener('click', async (event) => {
   // Log the user information to console to observe final result
   console.log(user);
 });
+hasTokensBtn.addEventListener('click', async (event) => {
+  const hasTokens = await storeReplacement.has();
+  console.log(hasTokens);
+});
+refreshTokensBtn.addEventListener('click', async (event) => {
+  const refreshTokens = await storeReplacement.refresh();
+  console.log(refreshTokens);
+});
 loginBtn.addEventListener('click', async (event) => {
   await TokenManager.getTokens({ login: 'redirect', forceRenew: true });
 });
@@ -107,25 +107,3 @@ logoutBtn.addEventListener('click', async (event) => {
   // Not all endpoints are supported and will fail
   FRUser.logout();
 });
-
-/** ****************************************************
-* CENTRAL LOGIN REDIRECT HANDLER
-*/
-
-/**
-* Check URL for query parameters
-*/
-const url = new URL(document.location);
-const params = url.searchParams;
-const code = params.get('code');
-const state = params.get('state');
-
-/**
-* If the URL has state and code as query parameters, then the user
-* returned back here after successfully logging, so call authorize with
-* the values
-*/
-if (state && code) {
-  await TokenManager.getTokens({ query: { code, state } });
-  location.replace('http://localhost:8000');
-}

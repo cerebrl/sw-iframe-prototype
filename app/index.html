@@ -1,16 +1,37 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Service Worker Prototype</title>
+    <title>Token Vault Demo</title>
+
     <link rel="icon" href="favicon.ico" />
+
+    <style>
+      @media (prefers-color-scheme: dark) {
+        html {
+          background-color: black;
+          color: white;
+        }
+        a {
+          color: lightblue;
+        }
+        a:visited {
+          color: lavender;
+        }
+        a:hover {
+          color: lightskyblue;
+        }
+      }
+    </style>
   </head>
   <body>
     <button id="loginBtn">Login</button>
     <button id="fetchMockBtn">Fetch Mock Todos</button>
     <button id="fetchUserBtn">Fetch Real User</button>
+    <button id="hasTokens">Check for Tokens</button>
+    <button id="refreshTokens">Refresh Tokens</button>
     <button id="logoutBtn">Logout</button>
 
-    <iframe id="identityProxyFrame" src="http://localhost:9000" style="display: none;"></iframe>
+    <div id="token-vault"></div>
     <script type="module" src="./index.js"></script>
   </body>
 </html>
