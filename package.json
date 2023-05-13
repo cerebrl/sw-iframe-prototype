@@ -17,7 +17,10 @@
   },
   "homepage": "https://github.com/cerebrl/sw-prototype#readme",
   "dependencies": {
-    "@forgerock/javascript-sdk": "^4.0.0-beta.4",
+    "@forgerock/javascript-sdk": "^4.0.0-beta.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.4",
     "vite": "^4.3.5"
   }
 }

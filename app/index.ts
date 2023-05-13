@@ -6,14 +6,8 @@ import { client } from '../token-vault';
 
 // Initialize the token vault client
 const register = client({
-  events: {
-    // fetch: 'FETCH_RESOURCE',
-    // remove: 'REMOVE_TOKENS',
-    // set: 'SET_TOKENS',
-  },
   interceptor: {
     file: 'interceptor.js',
-    type: 'module',
   },
   proxy: {
     origin: 'http://localhost:9000',
@@ -25,7 +19,7 @@ const register = client({
 const interceptor = await register.interceptor();
 
 // Register the proxy
-const proxy = register.proxy(document.getElementById('token-vault'));
+const proxy = register.proxy(document.getElementById('token-vault') as HTMLElement);
 
 // Register the token store replacement
 const storeReplacement = register.store();
@@ -45,7 +39,11 @@ Config.set({
     timeout: 3000,
   },
   realmPath: 'alpha',
-  tokenStore: storeReplacement,
+  tokenStore: {
+    get: storeReplacement.get,
+    set: storeReplacement.set,
+    remove: storeReplacement.remove,
+  }
 });
 
 
@@ -56,7 +54,7 @@ Config.set({
 /**
  * Check URL for query parameters
  */
-const url = new URL(document.location);
+const url = new URL(document.location.href);
 const params = url.searchParams;
 const code = params.get('code');
 const state = params.get('state');
@@ -76,12 +74,12 @@ if (state && code) {
  * ATTACH USER EVENT LISTENERS
  */
 
-const fetchMockBtn = document.getElementById('fetchMockBtn');
-const fetchUserBtn = document.getElementById('fetchUserBtn');
-const hasTokensBtn = document.getElementById('hasTokens');
-const refreshTokensBtn = document.getElementById('refreshTokens');
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
+const fetchMockBtn = document.getElementById('fetchMockBtn') as HTMLButtonElement;
+const fetchUserBtn = document.getElementById('fetchUserBtn') as HTMLButtonElement;
+const hasTokensBtn = document.getElementById('hasTokens') as HTMLButtonElement;
+const refreshTokensBtn = document.getElementById('refreshTokens') as HTMLButtonElement;
+const loginBtn = document.getElementById('loginBtn') as HTMLButtonElement;
+const logoutBtn = document.getElementById('logoutBtn') as HTMLButtonElement;
 
 fetchMockBtn.addEventListener('click', async (event) => {
   await fetch('https://jsonplaceholder.typicode.com/todos');

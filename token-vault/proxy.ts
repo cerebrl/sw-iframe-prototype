@@ -3,33 +3,48 @@ import {
   getEndpointPath,
   refreshOAuth2Tokens,
   resolve,
-} from './_utils';
+} from "./_utils";
+import { BaseConfig } from "./interface";
 
-export function proxy(config) {
-  const clientId = config?.forgerock?.clientId || 'WebOAuthClient';
-  const clientOrigin = config?.proxy?.origin || 'http://localhost:8000';
-  const fetchEventName = config?.events?.fetch || 'FETCH_RESOURCE';
-  const hasTokenEventName = config?.events?.has || 'HAS_TOKENS';
-  const refreshTokenEventName =
-    config?.events?.refresh || 'REFRESH_TOKENS';
-  const removeTokenEventName = config?.events?.remove || 'REMOVE_TOKENS';
-  const scope = config?.forgerock?.scope || 'openid email';
-  const setTokenEventName = config?.events?.set || 'SET_TOKENS';
+type ProxyConfigInit = Partial<BaseConfig>;
+interface ProxyConfig extends ProxyConfigInit {
+  forgerock: BaseConfig["forgerock"];
+}
+
+export function proxy(config: ProxyConfig) {
+  const clientId = config.forgerock?.clientId || "WebOAuthClient";
+  const clientOrigin = config.proxy?.origin || "http://localhost:8000";
+  const scope = config.forgerock?.scope || "openid email";
+
+  const fetchEventName = config?.events?.fetch || "FETCH_RESOURCE";
+  const hasTokenEventName = config?.events?.has || "HAS_TOKENS";
+  const refreshTokenEventName = config?.events?.refresh || "REFRESH_TOKENS";
+  const removeTokenEventName = config?.events?.remove || "REMOVE_TOKENS";
+  const setTokenEventName = config?.events?.set || "SET_TOKENS";
 
   /**
    * Generate AM URLs
    */
   const forgerockBaseUrl = checkForMissingSlash(
-    config?.forgerock?.serverConfig?.baseUrl
+    config.forgerock.serverConfig.baseUrl
   );
-  const realmPath = config?.forgerock?.realmPath || 'root';
+  const realmPath = config?.forgerock?.realmPath || "root";
   const urls = {
-    revoke: `${resolve(forgerockBaseUrl, getEndpointPath('revoke', realmPath))}`,
-    userInfo: `${resolve(forgerockBaseUrl, getEndpointPath('userInfo', realmPath))}`,
-    accessToken: `${resolve(forgerockBaseUrl, getEndpointPath('accessToken', realmPath))}`,
+    revoke: `${resolve(
+      forgerockBaseUrl,
+      getEndpointPath("revoke", realmPath)
+    )}`,
+    userInfo: `${resolve(
+      forgerockBaseUrl,
+      getEndpointPath("userInfo", realmPath)
+    )}`,
+    accessToken: `${resolve(
+      forgerockBaseUrl,
+      getEndpointPath("accessToken", realmPath)
+    )}`,
   };
 
-  window.addEventListener('message', async (event) => {
+  window.addEventListener("message", async (event) => {
     const eventType = event.data?.type;
     const swChannel = event.ports[0];
 
@@ -88,7 +103,7 @@ export function proxy(config) {
         tokens = JSON.stringify(event.data?.tokens);
       } catch (error) {
         // TODO: Handle error more intelligently
-        tokens = {};
+        tokens = '';
       }
 
       localStorage.setItem(clientId, tokens);
@@ -123,13 +138,13 @@ export function proxy(config) {
 
       let response;
 
-      if (request.url?.includes('token/revoke')) {
+      if (request.url?.includes("token/revoke")) {
         /**
          * The token revocation endpoint requires the token to be sent in the body
          */
         const bodyString = await request.options?.body?.text();
         const body = new URLSearchParams(bodyString);
-        body.append('token', tokens.accessToken);
+        body.append("token", tokens.accessToken);
 
         response = await fetch(request.url, {
           ...request.options,

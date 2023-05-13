@@ -6,27 +6,35 @@ import {
   getHeaders,
   resolve,
 } from './_utils';
+import type { BaseConfig } from "./interface";
 
-// TODO: Figure out how to get this to work with TypeScript
-declare const self: any;
+declare const self: ServiceWorkerGlobalScope;
 
-export function interceptor(config) {
+interface InterceptorConfig {
+  events?: BaseConfig["events"];
+  forgerock: BaseConfig["forgerock"];
+  interceptor: {
+    urls: string[];
+  }
+}
+
+export function interceptor(config: InterceptorConfig) {
   /** ****************************************************
    * SERVICE WORKER IMPLEMENTATION
    */
   const fetchEventName = config?.events?.fetch || 'FETCH_RESOURCE';
   const forgerockBaseUrl = checkForMissingSlash(
-    config?.forgerock?.serverConfig?.baseUrl
+    config.forgerock.serverConfig.baseUrl
   );
-  const realmPath = config?.forgerock?.realmPath || 'root';
+  const realmPath = config.forgerock?.realmPath || 'root';
   const urls = [
-    ...config?.interceptor?.urls,
+    ...config.interceptor.urls,
     // `${resolve(forgerockBaseUrl, getEndpointPath('accessToken', config?.forgerock?.realmPath))}`,
     `${resolve(forgerockBaseUrl, getEndpointPath('revoke', realmPath))}`,
     `${resolve(forgerockBaseUrl, getEndpointPath('userInfo', realmPath))}`,
   ];
 
-  self.addEventListener('install', (event) => {
+  self.addEventListener('install', () => {
     self.skipWaiting();
   });
 
@@ -44,7 +52,15 @@ export function interceptor(config) {
 
       event.respondWith(
         new Promise(async (resolve, reject) => {
-          const app = await self.clients.get(event.clientId);
+          let app;
+          try {
+            app = await self.clients.get(event.clientId);
+          } catch (error) {
+            return reject(`Error getting client: ${error}`);
+          }
+          if (!app) {
+            return reject('No client found');
+          }
           const requestCopy = {
             url: request.url,
             options: {

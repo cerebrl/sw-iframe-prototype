@@ -1,25 +1,13 @@
-type ClientConfig = {
-  events?: {
-    fetch?: string;
-    has?: string;
-    refresh?: string;
-    remove?: string;
-    set?: string;
-  };
-  forgerock: {
-    clientId: string;
-  };
-  interceptor?: {
-    file?: string;
-    type?: string;
-  };
-  proxy?: {
-    id?: string;
-    origin: string;
-    url?: string;
-  };
-};
+import type { Tokens, OAuth2Tokens } from "@forgerock/javascript-sdk";
 
+import type { BaseConfig } from "./interface";
+
+type ClientConfigInit = Partial<BaseConfig>;
+interface ClientConfig extends ClientConfigInit {
+  forgerock?: BaseConfig["forgerock"];
+  interceptor: BaseConfig["interceptor"];
+  proxy: BaseConfig["proxy"];
+}
 
 /**
  * @function client - Initialize the token vault client
@@ -29,14 +17,14 @@ type ClientConfig = {
  * @returns {undefined}
  */
 export function client(config: ClientConfig) {
-  let tokenVaultProxyEl;
+  let tokenVaultProxyEl: HTMLIFrameElement;
 
   return {
-    interceptor: async function (options) {
+    interceptor: async function (options?: BaseConfig["interceptor"]) {
       /** ****************************************************
        * SERVICE WORKER REGISTRATION
        */
-      const filename = options?.file || config?.interceptor?.file;
+      const filename = options?.file || config.interceptor.file;
       const moduleType = options?.type || config?.interceptor?.type || 'module';
 
       const registerServiceWorker = async () => {
@@ -51,11 +39,12 @@ export function client(config: ClientConfig) {
             );
           }
         }
+        return;
       };
 
       return await registerServiceWorker();
     },
-    proxy: function (target, options) {
+    proxy: function (target: HTMLElement, options?: BaseConfig["proxy"]) {
       /** ****************************************************
        * IFRAME HTTP PROXY SETUP
        */
@@ -75,7 +64,7 @@ export function client(config: ClientConfig) {
 
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data?.type === fetchEventName) {
-          tokenVaultProxyEl.contentWindow.postMessage(
+          tokenVaultProxyEl.contentWindow?.postMessage(
             { type: fetchEventName, request: event.data.request },
             proxyOrigin,
             [event.ports[0]]
@@ -85,7 +74,7 @@ export function client(config: ClientConfig) {
 
       return tokenVaultProxyEl;
     },
-    store: function (options) {
+    store: function () {
       const clientId = config?.forgerock?.clientId || 'WebOAuthClient';
       const hasTokenEventName = config?.events?.has || 'HAS_TOKENS';
       const refreshTokenEventName =
@@ -97,15 +86,15 @@ export function client(config: ClientConfig) {
       return {
         get() {
           // We cannot get the tokens out of the iframe
-          return null;
+          return Promise.resolve(null as unknown as Tokens);
         },
         has() {
           const proxyChannel = new MessageChannel();
 
           return new Promise((resolve, reject) => {
-            tokenVaultProxyEl.contentWindow.postMessage(
+            tokenVaultProxyEl.contentWindow?.postMessage(
               { type: hasTokenEventName, clientId },
-              options?.proxy?.origin || config?.proxy?.origin,
+              config.proxy.origin,
               [proxyChannel.port2]
             );
             proxyChannel.port1.onmessage = (event) => {
@@ -117,9 +106,9 @@ export function client(config: ClientConfig) {
           const proxyChannel = new MessageChannel();
 
           return new Promise((resolve, reject) => {
-            tokenVaultProxyEl.contentWindow.postMessage(
+            tokenVaultProxyEl.contentWindow?.postMessage(
               { type: refreshTokenEventName, clientId },
-              options?.proxy?.origin || config?.proxy?.origin,
+              config.proxy.origin,
               [proxyChannel.port2]
             );
             proxyChannel.port1.onmessage = (event) => {
@@ -127,31 +116,31 @@ export function client(config: ClientConfig) {
             };
           });
         },
-        remove(clientId) {
+        remove(): Promise<void> {
           const proxyChannel = new MessageChannel();
 
           return new Promise((resolve, reject) => {
-            tokenVaultProxyEl.contentWindow.postMessage(
+            tokenVaultProxyEl.contentWindow?.postMessage(
               { type: removeTokenEventName, clientId },
-              options?.proxy?.origin || config?.proxy?.origin,
+              config.proxy.origin,
               [proxyChannel.port2]
             );
             proxyChannel.port1.onmessage = (event) => {
-              resolve(event.data);
+              resolve(undefined);
             };
           });
         },
-        set(clientId, tokens) {
+        set(_: string, tokens: OAuth2Tokens): Promise<void> {
           const proxyChannel = new MessageChannel();
 
           return new Promise((resolve, reject) => {
-            tokenVaultProxyEl.contentWindow.postMessage(
+            tokenVaultProxyEl.contentWindow?.postMessage(
               { type: setTokenEventName, clientId, tokens },
-              options?.proxy?.origin || config?.proxy?.origin,
+              config.proxy.origin,
               [proxyChannel.port2]
             );
             proxyChannel.port1.onmessage = (event) => {
-              resolve(event.data);
+              resolve(undefined);
             };
           });
         },

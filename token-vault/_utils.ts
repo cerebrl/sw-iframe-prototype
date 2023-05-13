@@ -1,22 +1,29 @@
-/*
- * @forgerock/javascript-sdk
- *
- * url.ts
- *
- * Copyright (c) 2020 ForgeRock. All rights reserved.
- * This software may be modified and distributed under the terms
- * of the MIT license. See the LICENSE file for details.
- */
+import { GetOAuth2TokensOptions } from '@forgerock/javascript-sdk';
 
-export function checkForMissingSlash(url) {
-  if (url && url.charAt(url.length - 1) !== '/') {
-    return url + '/';
+type ConfigurablePaths = keyof CustomPathConfig;
+
+/**
+ * Optional configuration for custom paths for actions
+ */
+interface CustomPathConfig {
+  authenticate?: string;
+  authorize?: string;
+  accessToken?: string;
+  endSession?: string;
+  userInfo?: string;
+  revoke?: string;
+  sessions?: string;
+}
+
+export function checkForMissingSlash(url: string) {
+  if (url && url.charAt(url.length - 1) !== "/") {
+    return url + "/";
   }
   return url;
 }
 
-export function evaluateUrlForInterception(url, urls) {
-  if (url.includes('access_token')) {
+export function evaluateUrlForInterception(url: string, urls: string[]) {
+  if (url.includes("access_token")) {
     console.log(`Evaluating ${url}`);
   }
   const outcome = urls?.includes(url);
@@ -27,18 +34,18 @@ export function evaluateUrlForInterception(url, urls) {
  * Returns the base URL including protocol, hostname and any non-standard port.
  * The returned URL does not include a trailing slash.
  */
-export function getBaseUrl(url) {
+export function getBaseUrl(url: URL) {
   const isNonStandardPort =
-    (url.protocol === 'http:' && ['', '80'].indexOf(url.port) === -1) ||
-    (url.protocol === 'https:' && ['', '443'].indexOf(url.port) === -1);
-  const port = isNonStandardPort ? `:${url.port}` : '';
+    (url.protocol === "http:" && ["", "80"].indexOf(url.port) === -1) ||
+    (url.protocol === "https:" && ["", "443"].indexOf(url.port) === -1);
+  const port = isNonStandardPort ? `:${url.port}` : "";
   const baseUrl = `${url.protocol}//${url.hostname}${port}`;
   return baseUrl;
 }
 
-export async function getBodyBlob(request) {
+export async function getBodyBlob(request: Request): Promise<undefined | Blob> {
   // Return undefined early if GET or HEAD
-  if (['GET', 'HEAD'].includes(request.method)) {
+  if (["GET", "HEAD"].includes(request.method)) {
     return;
   }
 
@@ -47,21 +54,22 @@ export async function getBodyBlob(request) {
   if (blob && blob.size) {
     return blob;
   }
+  return;
 }
 
-async function getBodyJsonOrText(response) {
-  const contentType = response.headers.get('Content-Type');
-  if (contentType && contentType.indexOf('application/json') > -1) {
+async function getBodyJsonOrText(response: Response) {
+  const contentType = response.headers.get("Content-Type");
+  if (contentType && contentType.indexOf("application/json") > -1) {
     return await response.json();
   }
   return await response.text();
 }
 
 export function getEndpointPath(
-  endpoint,
-  realmPath,
-  customPaths?: Record<string, string>,
-) {
+  endpoint: ConfigurablePaths,
+  realmPath?: string,
+  customPaths?: CustomPathConfig,
+): string {
   const realmUrlPath = getRealmUrlPath(realmPath);
   const defaultPaths = {
     authenticate: `json/${realmUrlPath}/authenticate`,
@@ -83,33 +91,40 @@ export function getEndpointPath(
   }
 }
 
+type RequestHeaders = Record<string, string | null>;
+
 export function getHeaders(request: Request) {
-  return Array.from(request.headers.keys()).reduce((acc, key) => {
+  return Array.from(request.headers.keys()).reduce<RequestHeaders>((acc, key) => {
     acc[key] = request.headers.get(key);
     return acc;
   }, {});
 }
 
 /**
-   * Exchanges an authorization code for OAuth tokens.
-   */
-export async function refreshOAuth2Tokens(config) {
+ * Exchanges an authorization code for OAuth tokens.
+ */
+type RefreshOAuth2TokensOptionsInit = Omit<GetOAuth2TokensOptions, "authorizationCode">;
+interface RefreshOAuth2TokensOptions extends RefreshOAuth2TokensOptionsInit {
+  refreshToken: string;
+  url: string;
+}
 
+export async function refreshOAuth2Tokens(config: RefreshOAuth2TokensOptions) {
   const requestParams = {
-    client_id: config.clientId,
-    grant_type: 'refresh_token',
-    refresh_token: config.refreshToken,
-    scope: config.scope,
+    client_id: config.clientId || "",
+    grant_type: "refresh_token",
+    refresh_token: config.refreshToken || "",
+    scope: config.scope || "openid",
   };
 
   const body = stringify(requestParams);
   const init = {
     body,
     headers: new Headers({
-      'Content-Length': body.length.toString(),
-      'Content-Type': 'application/x-www-form-urlencoded',
+      "Content-Length": body.length.toString(),
+      "Content-Type": "application/x-www-form-urlencoded",
     }),
-    method: 'POST',
+    method: "POST",
   };
 
   const response = await fetch(config.url, init);
@@ -117,15 +132,15 @@ export async function refreshOAuth2Tokens(config) {
 
   if (response.status !== 200) {
     const message =
-      typeof responseBody === 'string'
+      typeof responseBody === "string"
         ? `Expected 200, received ${response.status}`
-        : this.parseError(responseBody);
+        : parseError(responseBody);
     throw new Error(message);
   }
 
   const responseObject = responseBody;
   if (!responseObject.access_token) {
-    throw new Error('Access token not found in response');
+    throw new Error("Access token not found in response");
   }
 
   let tokenExpiry;
@@ -141,50 +156,62 @@ export async function refreshOAuth2Tokens(config) {
   };
 }
 
-export function getRealmUrlPath(realmPath) {
+export function getRealmUrlPath(realmPath?: string) {
   // Split the path and scrub segments
-  const names = (realmPath || '')
-    .split('/')
+  const names = (realmPath || "")
+    .split("/")
     .map((x) => x.trim())
-    .filter((x) => x !== '');
+    .filter((x) => x !== "");
 
   // Ensure 'root' is the first realm
-  if (names[0] !== 'root') {
-    names.unshift('root');
+  if (names[0] !== "root") {
+    names.unshift("root");
   }
 
   // Concatenate into a URL path
-  const urlPath = names.map((x) => `realms/${x}`).join('/');
+  const urlPath = names.map((x) => `realms/${x}`).join("/");
   return urlPath;
 }
 
-export function parseQuery(fullUrl) {
+export function parseError(json: Record<string, unknown>): string | undefined {
+  if (json) {
+    if (json.error && json.error_description) {
+      return `${json.error}: ${json.error_description}`;
+    }
+    if (json.code && json.message) {
+      return `${json.code}: ${json.message}`;
+    }
+  }
+  return undefined;
+}
+
+export function parseQuery(fullUrl: string) {
   const url = new URL(fullUrl);
-  const query = {};
+  const query: Record<string, string> = {};
   url.searchParams.forEach((v, k) => (query[k] = v));
   return query;
 }
 
-export function resolve(baseUrl, path) {
+export function resolve(baseUrl: string, path: string) {
   const url = new URL(baseUrl);
 
-  if (path.startsWith('/')) {
+  if (path.startsWith("/")) {
     return `${getBaseUrl(url)}${path}`;
   }
 
-  const basePath = url.pathname.split('/');
-  const destPath = path.split('/').filter((x) => !!x);
-  const newPath = [...basePath.slice(0, -1), ...destPath].join('/');
+  const basePath = url.pathname.split("/");
+  const destPath = path.split("/").filter((x) => !!x);
+  const newPath = [...basePath.slice(0, -1), ...destPath].join("/");
 
   return `${getBaseUrl(url)}${newPath}`;
 }
 
-export function stringify(data) {
+export function stringify(data: Record<string, string>) {
   const pairs: string[] = [];
   for (const k in data) {
     if (data[k]) {
-      pairs.push(k + '=' + encodeURIComponent(data[k]));
+      pairs.push(k + "=" + encodeURIComponent(data[k]));
     }
   }
-  return pairs.join('&');
+  return pairs.join("&");
 }
