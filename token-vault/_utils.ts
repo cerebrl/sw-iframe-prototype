@@ -43,7 +43,16 @@ export function getBaseUrl(url: URL) {
   return baseUrl;
 }
 
-export async function getBodyBlob(request: Request): Promise<undefined | Blob> {
+export async function getResponseBodyBlob(response: Response) {
+  const blob = await response.clone().blob();
+
+  if (blob && blob.size) {
+    return blob;
+  }
+  return;
+}
+
+export async function getRequestBodyBlob(request: Request): Promise<undefined | Blob> {
   // Return undefined early if GET or HEAD
   if (["GET", "HEAD"].includes(request.method)) {
     return;
@@ -91,9 +100,18 @@ export function getEndpointPath(
   }
 }
 
+type ResponseHeaders = Record<string, string | null>;
+
+export function getResponseHeaders(response: Response) {
+  return Array.from(response.headers.keys()).reduce<ResponseHeaders>((acc, key) => {
+    acc[key] = response.headers.get(key);
+    return acc;
+  }, {});
+}
+
 type RequestHeaders = Record<string, string | null>;
 
-export function getHeaders(request: Request) {
+export function getRequestHeaders(request: Request) {
   return Array.from(request.headers.keys()).reduce<RequestHeaders>((acc, key) => {
     acc[key] = request.headers.get(key);
     return acc;

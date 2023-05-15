@@ -8,6 +8,10 @@ interface ForgeRockConfig extends ConfigOptions {
 }
 
 export type BaseConfig = {
+  app: {
+    origin: string;
+    url: string;
+  },
   events?: {
     fetch?: string;
     has?: string;

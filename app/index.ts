@@ -6,8 +6,12 @@ import { client } from '../token-vault';
 
 // Initialize the token vault client
 const register = client({
+  app: {
+    origin: 'http://localhost:8000',
+    url: 'http://localhost:8000',
+  },
   interceptor: {
-    file: 'interceptor.js',
+    file: 'interceptor.ts',
   },
   proxy: {
     origin: 'http://localhost:9000',
@@ -15,7 +19,7 @@ const register = client({
   },
 });
 
-// Register the interceptor]
+// Register the interceptor
 const interceptor = await register.interceptor();
 
 // Register the proxy

@@ -1,9 +1,9 @@
 import {
   checkForMissingSlash,
   evaluateUrlForInterception,
-  getBodyBlob,
+  getRequestBodyBlob,
   getEndpointPath,
-  getHeaders,
+  getRequestHeaders,
   resolve,
 } from './_utils';
 import type { BaseConfig } from "./interface";
@@ -29,7 +29,7 @@ export function interceptor(config: InterceptorConfig) {
   const realmPath = config.forgerock?.realmPath || 'root';
   const urls = [
     ...config.interceptor.urls,
-    // `${resolve(forgerockBaseUrl, getEndpointPath('accessToken', config?.forgerock?.realmPath))}`,
+    `${resolve(forgerockBaseUrl, getEndpointPath('accessToken', realmPath))}`,
     `${resolve(forgerockBaseUrl, getEndpointPath('revoke', realmPath))}`,
     `${resolve(forgerockBaseUrl, getEndpointPath('userInfo', realmPath))}`,
   ];
@@ -65,8 +65,8 @@ export function interceptor(config: InterceptorConfig) {
             url: request.url,
             options: {
               method: request.method,
-              headers: getHeaders(request),
-              body: await getBodyBlob(request),
+              headers: getRequestHeaders(request),
+              body: await getRequestBodyBlob(request),
               mode: request.mode,
               credentials: request.credentials,
               cache: request.cache,
@@ -81,7 +81,21 @@ export function interceptor(config: InterceptorConfig) {
           ]);
           proxyChannel.port1.onmessage = (messageEvent) => {
             console.log(`Returning ${url}`);
-            resolve(new Response(JSON.stringify(messageEvent.data)));
+            let response;
+
+            try {
+              response = JSON.parse(messageEvent.data);
+            } catch (error) {
+              return reject(`Error parsing response in interceptor: ${error}`);
+            }
+
+            // Create a new response from the response body and headers
+            // The body, first argument, needs to be converted back to string
+            resolve(new Response(JSON.stringify(response?.body), {
+              headers: response?.headers,
+              status: response?.status,
+              statusText: response?.statusText,
+            }));
           };
         })
       );

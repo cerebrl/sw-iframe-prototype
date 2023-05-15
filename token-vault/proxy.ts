@@ -1,19 +1,23 @@
 import {
   checkForMissingSlash,
+  getResponseBodyBlob,
   getEndpointPath,
+  getResponseHeaders,
   refreshOAuth2Tokens,
   resolve,
+  getRequestHeaders,
 } from "./_utils";
 import { BaseConfig } from "./interface";
 
 type ProxyConfigInit = Partial<BaseConfig>;
 interface ProxyConfig extends ProxyConfigInit {
+  app: BaseConfig["app"];
   forgerock: BaseConfig["forgerock"];
 }
 
 export function proxy(config: ProxyConfig) {
   const clientId = config.forgerock?.clientId || "WebOAuthClient";
-  const clientOrigin = config.proxy?.origin || "http://localhost:8000";
+  const clientOrigin = config.app.origin || "http://localhost:8000";
   const scope = config.forgerock?.scope || "openid email";
 
   const fetchEventName = config?.events?.fetch || "FETCH_RESOURCE";
@@ -47,6 +51,8 @@ export function proxy(config: ProxyConfig) {
   window.addEventListener("message", async (event) => {
     const eventType = event.data?.type;
     const swChannel = event.ports[0];
+
+    console.log(`Received ${eventType} event from ${event.origin}`);
 
     // Ignore all messages that don't come from the registered client
     if (event.origin !== clientOrigin) {
@@ -138,7 +144,40 @@ export function proxy(config: ProxyConfig) {
 
       let response;
 
-      if (request.url?.includes("token/revoke")) {
+      if (request.url?.includes("access_token")) {
+        response = await fetch(request.url, {
+          ...request.options,
+          headers: new Headers({
+            ...request.options.headers,
+          }),
+        });
+
+        // Clone and redact the response
+        const clone = response.clone();
+        const json = await clone.json();
+        const responseClone = {
+          body: {
+            ...json,
+            access_token: "REDACTED",
+            refresh_token: "REDACTED",
+          },
+          headers: getResponseHeaders(clone),
+          ok: clone.ok,
+          status: clone.status,
+          statusText: clone.statusText,
+          type: clone.type,
+          url: clone.url,
+        };
+
+        swChannel.postMessage(JSON.stringify(responseClone));
+
+        // Save original tokens to localStorage
+        const tokens = await response.text();
+        localStorage.setItem(clientId, tokens);
+
+        // Return early
+        return;
+      } else if (request.url?.includes("token/revoke")) {
         /**
          * The token revocation endpoint requires the token to be sent in the body
          */

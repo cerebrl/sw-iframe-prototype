@@ -2,6 +2,10 @@ import { proxy } from "../token-vault";
 
 // Initialize the token vault proxy
 proxy({
+  app: {
+    origin: "http://localhost:8000",
+    url: "http://localhost:8000",
+  },
   forgerock: {
     clientId: 'WebOAuthClient',
     serverConfig: {
