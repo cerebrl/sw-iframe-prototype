@@ -23,7 +23,7 @@ const register = client({
 const interceptor = await register.interceptor();
 
 // Register the proxy
-const proxy = register.proxy(document.getElementById('token-vault') as HTMLElement);
+const proxy = await register.proxy(document.getElementById('token-vault') as HTMLElement);
 
 // Register the token store replacement
 const storeReplacement = register.store();
@@ -40,7 +40,7 @@ Config.set({
   scope: 'openid profile me.read',
   serverConfig: {
     baseUrl: 'https://openam-crbrl-01.forgeblocks.com/am',
-    timeout: 3000,
+    timeout: 5000,
   },
   realmPath: 'alpha',
   tokenStore: {
@@ -65,8 +65,8 @@ const state = params.get('state');
 
 /**
  * If the URL has state and code as query parameters, then the user
- * returned back here after successfully logging, so call authorize with
- * the values
+ * returned back here after successfully logging in, so call authorize
+ * with the values
  */
 if (state && code) {
   await TokenManager.getTokens({ query: { code, state } });
