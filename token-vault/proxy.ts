@@ -1,205 +1,164 @@
 import {
-  checkForMissingSlash,
-  getResponseBodyBlob,
-  getEndpointPath,
-  getResponseHeaders,
-  refreshOAuth2Tokens,
-  resolve,
-  getRequestHeaders,
-} from "./_utils";
-import { BaseConfig } from "./interface";
-
-type ProxyConfigInit = Partial<BaseConfig>;
-interface ProxyConfig extends ProxyConfigInit {
-  app: BaseConfig["app"];
-  forgerock: BaseConfig["forgerock"];
-}
+  refreshTokens,
+  storeTokens,
+  requestTokens,
+  getTokens,
+} from "./utils/token.utils";
+import { cloneResponse, generateUrls } from "./utils/network.utils";
+import { ProxyConfig, ResponseClone } from "./interface";
 
 export function proxy(config: ProxyConfig) {
+  /**
+   * Client configuration
+   */
   const clientId = config.forgerock?.clientId || "WebOAuthClient";
   const clientOrigin = config.app.origin || "http://localhost:8000";
   const scope = config.forgerock?.scope || "openid email";
 
+  /**
+   * Event names
+   */
   const fetchEventName = config?.events?.fetch || "FETCH_RESOURCE";
   const hasTokenEventName = config?.events?.has || "HAS_TOKENS";
   const refreshTokenEventName = config?.events?.refresh || "REFRESH_TOKENS";
   const removeTokenEventName = config?.events?.remove || "REMOVE_TOKENS";
-  const setTokenEventName = config?.events?.set || "SET_TOKENS";
 
   /**
    * Generate AM URLs
    */
-  const forgerockBaseUrl = checkForMissingSlash(
-    config.forgerock.serverConfig.baseUrl
-  );
-  const realmPath = config?.forgerock?.realmPath || "root";
-  const urls = {
-    revoke: `${resolve(
-      forgerockBaseUrl,
-      getEndpointPath("revoke", realmPath)
-    )}`,
-    userInfo: `${resolve(
-      forgerockBaseUrl,
-      getEndpointPath("userInfo", realmPath)
-    )}`,
-    accessToken: `${resolve(
-      forgerockBaseUrl,
-      getEndpointPath("accessToken", realmPath)
-    )}`,
-  };
+  const urls = generateUrls(config?.forgerock);
 
+  /**
+   * Create the proxy iframe
+   */
   window.addEventListener("message", async (event) => {
-    const eventType = event.data?.type;
-    const swChannel = event.ports[0];
+    const requestType = event.data?.type;
+    const responseChannel = event.ports[0];
 
-    console.log(`Received ${eventType} event from ${event.origin}`);
+    console.log(`Received ${requestType} event from ${event.origin}`);
 
     // Ignore all messages that don't come from the registered client
     if (event.origin !== clientOrigin) {
       return;
     }
 
-    if (eventType === hasTokenEventName) {
-      const tokensString = localStorage.getItem(clientId);
-      let tokens;
+    if (requestType === hasTokenEventName) {
+      /** ****************************************************
+       * HAS TOKEN
+       * DO NOT RETURN THE TOKEN!
+       *******************************************************/
 
-      if (tokensString) {
-        tokens = JSON.parse(tokensString) || {};
-      }
+      const tokens = getTokens(clientId);
 
       // Check if the Access Token exists
       // DO NOT RETURN THE TOKEN!
       const hasToken = Boolean(tokens.accessToken);
-      swChannel.postMessage(hasToken);
+      responseChannel.postMessage(hasToken);
+
       return;
-    } else if (eventType === refreshTokenEventName) {
-      const tokensString = localStorage.getItem(clientId);
-      let tokens;
+    } else if (requestType === refreshTokenEventName) {
+      /** ****************************************************
+       * REFRESH TOKEN
+       *******************************************************/
 
-      if (tokensString) {
-        tokens = JSON.parse(tokensString) || {};
-      }
-
-      let newTokens;
+      const tokens = getTokens(clientId);
 
       try {
-        newTokens = await refreshOAuth2Tokens({
+        const response = await refreshTokens({
           clientId,
           refreshToken: tokens.refreshToken,
           scope,
           url: urls.accessToken,
         });
-        localStorage.setItem(clientId, JSON.stringify(newTokens));
+        storeTokens(response, clientId);
 
-        swChannel.postMessage(
+        responseChannel.postMessage(
           `Tokens for ${clientId} have been refreshed in Token Vault`
         );
+
         return;
       } catch (error) {
-        swChannel.postMessage(error);
+        responseChannel.postMessage(error);
         return;
       }
-    } else if (eventType === setTokenEventName) {
-      /** ****************************************************
-       * SET TOKENS
-       */
-      let tokens;
-
-      try {
-        tokens = JSON.stringify(event.data?.tokens);
-      } catch (error) {
-        // TODO: Handle error more intelligently
-        tokens = '';
-      }
-
-      localStorage.setItem(clientId, tokens);
-      swChannel.postMessage(
-        `Tokens for ${clientId} have been set in Token Vault`
-      );
-      return;
-    } else if (eventType === removeTokenEventName) {
+    } else if (requestType === removeTokenEventName) {
       /** ****************************************************
        * REMOVE TOKENS
-       */
+       *******************************************************/
 
       localStorage.removeItem(clientId);
-      swChannel.postMessage(
+      responseChannel.postMessage(
         `Tokens for ${clientId} have been removed from Token Vault`
       );
       return;
-    } else if (eventType === fetchEventName) {
+    } else if (requestType === fetchEventName) {
       /** ****************************************************
-       * FETCH RESOURCE
-       */
+       * FETCH PROTECTED RESOURCE
+       *******************************************************/
 
       console.log(`Proxying ${event.data?.request?.url}`);
 
       const request = event.data?.request || {};
-      const tokensString = localStorage.getItem(clientId);
-      let tokens;
+      const tokens = getTokens(clientId);
 
-      if (tokensString) {
-        tokens = JSON.parse(tokensString) || {};
-      }
-
-      let response;
+      let clonedResponse: ResponseClone;
 
       if (request.url?.includes("access_token")) {
-        response = await fetch(request.url, {
-          ...request.options,
-          headers: new Headers({
-            ...request.options.headers,
-          }),
-        });
+        /** ****************************************************
+         * The access token endpoint
+         */
 
-        // Clone and redact the response
-        const clone = response.clone();
-        const json = await clone.json();
-        const responseClone = {
-          body: {
-            ...json,
-            access_token: "REDACTED",
-            refresh_token: "REDACTED",
-          },
-          headers: getResponseHeaders(clone),
-          ok: clone.ok,
-          status: clone.status,
-          statusText: clone.statusText,
-          type: clone.type,
-          url: clone.url,
-        };
+        const response = await requestTokens(request);
 
-        swChannel.postMessage(JSON.stringify(responseClone));
+        clonedResponse = await cloneResponse(response);
+        clonedResponse.body.access_token = "REDACTED";
+        clonedResponse.body.refresh_token = "REDACTED";
 
-        // Save original tokens to localStorage
-        const tokens = await response.text();
-        localStorage.setItem(clientId, tokens);
-
-        // Return early
-        return;
+        storeTokens(response, clientId);
       } else if (request.url?.includes("token/revoke")) {
-        /**
+        /** ****************************************************
          * The token revocation endpoint requires the token to be sent in the body
          */
+
         const bodyString = await request.options?.body?.text();
         const body = new URLSearchParams(bodyString);
-        body.append("token", tokens.accessToken);
+        body.append("token", tokens ? tokens?.accessToken : "");
 
-        response = await fetch(request.url, {
+        const response = await fetch(request.url, {
           ...request.options,
           body,
         });
+
+        clonedResponse = await cloneResponse(response);
+      } else if (request.url?.includes("connect/endSession")) {
+        /** ****************************************************
+         * The endSession endpoint requires the id_token_hint to be sent as a query parameter
+         */
+
+        const url = new URL(request.url);
+        url.searchParams.append("id_token_hint", tokens ? tokens?.idToken : "");
+        console.log(url.toString());
+
+        const response = await fetch(url.toString(), request.options);
+
+        clonedResponse = await cloneResponse(response);
       } else {
-        response = await fetch(request.url, {
+        /** ****************************************************
+         * All other requests require the access token to be sent in the Authorization header
+         */
+
+        const response = await fetch(request.url, {
           ...request.options,
           headers: new Headers({
             ...request.options.headers,
-            authorization: `Bearer ${tokens.accessToken}`,
+            authorization: `Bearer ${tokens ? tokens?.accessToken : ""}`,
           }),
         });
+
+        clonedResponse = await cloneResponse(response);
       }
-      const json = await response.json();
-      swChannel.postMessage(json);
+
+      responseChannel.postMessage(JSON.stringify(clonedResponse));
     }
   });
 }

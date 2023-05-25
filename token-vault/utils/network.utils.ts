@@ -1,4 +1,4 @@
-import { GetOAuth2TokensOptions } from '@forgerock/javascript-sdk';
+import { ForgeRockConfig } from "../interface";
 
 type ConfigurablePaths = keyof CustomPathConfig;
 
@@ -22,12 +22,46 @@ export function checkForMissingSlash(url: string) {
   return url;
 }
 
+export async function cloneResponse(response: Response) {
+  // Clone and redact the response
+  const clone = response.clone();
+
+  // TODO: Test if JSON body exists before using json() method
+  const json = await clone.json();
+  return {
+    body: { ...json },
+    headers: getResponseHeaders(clone),
+    ok: clone.ok,
+    redirected: clone.redirected,
+    status: clone.status,
+    statusText: clone.statusText,
+    type: clone.type,
+    url: clone.url,
+  };
+}
+
 export function evaluateUrlForInterception(url: string, urls: string[]) {
   if (url.includes("access_token")) {
     console.log(`Evaluating ${url}`);
   }
   const outcome = urls?.includes(url);
   return outcome;
+}
+
+export function generateUrls(forgerockConfig: ForgeRockConfig) {
+  const baseUrl = checkForMissingSlash(
+    forgerockConfig.serverConfig.baseUrl
+  );
+  const realmPath = forgerockConfig?.realmPath || "root";
+
+  return {
+    revoke: `${resolve(baseUrl, getEndpointPath("revoke", realmPath))}`,
+    userInfo: `${resolve(baseUrl, getEndpointPath("userInfo", realmPath))}`,
+    accessToken: `${resolve(
+      baseUrl,
+      getEndpointPath("accessToken", realmPath)
+    )}`,
+  };
 }
 
 /**
@@ -52,7 +86,9 @@ export async function getResponseBodyBlob(response: Response) {
   return;
 }
 
-export async function getRequestBodyBlob(request: Request): Promise<undefined | Blob> {
+export async function getRequestBodyBlob(
+  request: Request
+): Promise<undefined | Blob> {
   // Return undefined early if GET or HEAD
   if (["GET", "HEAD"].includes(request.method)) {
     return;
@@ -66,7 +102,7 @@ export async function getRequestBodyBlob(request: Request): Promise<undefined | 
   return;
 }
 
-async function getBodyJsonOrText(response: Response) {
+export async function getBodyJsonOrText(response: Response) {
   const contentType = response.headers.get("Content-Type");
   if (contentType && contentType.indexOf("application/json") > -1) {
     return await response.json();
@@ -77,7 +113,7 @@ async function getBodyJsonOrText(response: Response) {
 export function getEndpointPath(
   endpoint: ConfigurablePaths,
   realmPath?: string,
-  customPaths?: CustomPathConfig,
+  customPaths?: CustomPathConfig
 ): string {
   const realmUrlPath = getRealmUrlPath(realmPath);
   const defaultPaths = {
@@ -100,80 +136,6 @@ export function getEndpointPath(
   }
 }
 
-type ResponseHeaders = Record<string, string | null>;
-
-export function getResponseHeaders(response: Response) {
-  return Array.from(response.headers.keys()).reduce<ResponseHeaders>((acc, key) => {
-    acc[key] = response.headers.get(key);
-    return acc;
-  }, {});
-}
-
-type RequestHeaders = Record<string, string | null>;
-
-export function getRequestHeaders(request: Request) {
-  return Array.from(request.headers.keys()).reduce<RequestHeaders>((acc, key) => {
-    acc[key] = request.headers.get(key);
-    return acc;
-  }, {});
-}
-
-/**
- * Exchanges an authorization code for OAuth tokens.
- */
-type RefreshOAuth2TokensOptionsInit = Omit<GetOAuth2TokensOptions, "authorizationCode">;
-interface RefreshOAuth2TokensOptions extends RefreshOAuth2TokensOptionsInit {
-  refreshToken: string;
-  url: string;
-}
-
-export async function refreshOAuth2Tokens(config: RefreshOAuth2TokensOptions) {
-  const requestParams = {
-    client_id: config.clientId || "",
-    grant_type: "refresh_token",
-    refresh_token: config.refreshToken || "",
-    scope: config.scope || "openid",
-  };
-
-  const body = stringify(requestParams);
-  const init = {
-    body,
-    headers: new Headers({
-      "Content-Length": body.length.toString(),
-      "Content-Type": "application/x-www-form-urlencoded",
-    }),
-    method: "POST",
-  };
-
-  const response = await fetch(config.url, init);
-  const responseBody = await getBodyJsonOrText(response);
-
-  if (response.status !== 200) {
-    const message =
-      typeof responseBody === "string"
-        ? `Expected 200, received ${response.status}`
-        : parseError(responseBody);
-    throw new Error(message);
-  }
-
-  const responseObject = responseBody;
-  if (!responseObject.access_token) {
-    throw new Error("Access token not found in response");
-  }
-
-  let tokenExpiry;
-  if (responseObject.expires_in) {
-    tokenExpiry = Date.now() + responseObject.expires_in * 1000;
-  }
-
-  return {
-    accessToken: responseObject.access_token,
-    idToken: responseObject.id_token,
-    refreshToken: responseObject.refresh_token,
-    tokenExpiry: tokenExpiry,
-  };
-}
-
 export function getRealmUrlPath(realmPath?: string) {
   // Split the path and scrub segments
   const names = (realmPath || "")
@@ -189,6 +151,30 @@ export function getRealmUrlPath(realmPath?: string) {
   // Concatenate into a URL path
   const urlPath = names.map((x) => `realms/${x}`).join("/");
   return urlPath;
+}
+
+type ResponseHeaders = Record<string, string | null>;
+
+export function getResponseHeaders(response: Response) {
+  return Array.from(response.headers.keys()).reduce<ResponseHeaders>(
+    (acc, key) => {
+      acc[key] = response.headers.get(key);
+      return acc;
+    },
+    {}
+  );
+}
+
+type RequestHeaders = Record<string, string | null>;
+
+export function getRequestHeaders(request: Request) {
+  return Array.from(request.headers.keys()).reduce<RequestHeaders>(
+    (acc, key) => {
+      acc[key] = request.headers.get(key);
+      return acc;
+    },
+    {}
+  );
 }
 
 export function parseError(json: Record<string, unknown>): string | undefined {

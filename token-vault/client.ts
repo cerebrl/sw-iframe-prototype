@@ -77,7 +77,11 @@ export function client(config: ClientConfig) {
         }
       });
 
-      return tokenVaultProxyEl;
+      return new Promise((resolve, reject) => {
+        tokenVaultProxyEl.onload = () => {
+          resolve(tokenVaultProxyEl);
+        };
+      });
     },
     store: function () {
       const clientId = config?.forgerock?.clientId || 'WebOAuthClient';
@@ -86,11 +90,10 @@ export function client(config: ClientConfig) {
         config?.events?.refresh || 'REFRESH_TOKENS';
       const removeTokenEventName =
         config?.events?.remove || 'REMOVE_TOKENS';
-      const setTokenEventName = config?.events?.set || 'SET_TOKENS';
 
       return {
         get() {
-          // We cannot get the tokens out of the iframe
+          // Tokens are not retrievable from the iframe
           return Promise.resolve(null as unknown as Tokens);
         },
         has() {
@@ -136,19 +139,6 @@ export function client(config: ClientConfig) {
           });
         },
         set(_: string, tokens: OAuth2Tokens): Promise<void> {
-          const proxyChannel = new MessageChannel();
-
-          // Use this if not redacting tokens in proxy
-          // return new Promise((resolve, reject) => {
-          //   tokenVaultProxyEl.contentWindow?.postMessage(
-          //     { type: setTokenEventName, clientId, tokens },
-          //     config.proxy.origin,
-          //     [proxyChannel.port2]
-          //   );
-          //   proxyChannel.port1.onmessage = (event) => {
-          //     resolve(undefined);
-          //   };
-          // });
           return Promise.resolve(undefined);
         },
       };

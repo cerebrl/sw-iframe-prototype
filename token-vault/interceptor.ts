@@ -5,7 +5,7 @@ import {
   getEndpointPath,
   getRequestHeaders,
   resolve,
-} from './_utils';
+} from './utils/network.utils';
 import type { BaseConfig } from "./interface";
 
 declare const self: ServiceWorkerGlobalScope;
@@ -30,8 +30,10 @@ export function interceptor(config: InterceptorConfig) {
   const urls = [
     ...config.interceptor.urls,
     `${resolve(forgerockBaseUrl, getEndpointPath('accessToken', realmPath))}`,
+    `${resolve(forgerockBaseUrl, getEndpointPath('endSession', realmPath))}?`,
     `${resolve(forgerockBaseUrl, getEndpointPath('revoke', realmPath))}`,
     `${resolve(forgerockBaseUrl, getEndpointPath('userInfo', realmPath))}`,
+    `${resolve(forgerockBaseUrl, getEndpointPath('sessions', realmPath))}`,
   ];
 
   self.addEventListener('install', () => {
