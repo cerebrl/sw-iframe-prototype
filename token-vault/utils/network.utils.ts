@@ -1,19 +1,8 @@
-import { ForgeRockConfig } from "../interface";
-
-type ConfigurablePaths = keyof CustomPathConfig;
-
-/**
- * Optional configuration for custom paths for actions
- */
-interface CustomPathConfig {
-  authenticate?: string;
-  authorize?: string;
-  accessToken?: string;
-  endSession?: string;
-  userInfo?: string;
-  revoke?: string;
-  sessions?: string;
-}
+import {
+  ConfigurablePaths,
+  CustomPathConfig,
+} from "@forgerock/javascript-sdk/src/config/interfaces";
+import { ForgeRockConfig, RequestHeaders, ResponseHeaders } from "../interface";
 
 export function checkForMissingSlash(url: string) {
   if (url && url.charAt(url.length - 1) !== "/") {
@@ -26,10 +15,16 @@ export async function cloneResponse(response: Response) {
   // Clone and redact the response
   const clone = response.clone();
 
-  // TODO: Test if JSON body exists before using json() method
-  const json = await clone.json();
+  let body;
+  try {
+    body = await getBodyJsonOrText(clone);
+  } catch (error) {
+    body = undefined;
+  }
+
   return {
-    body: { ...json },
+    // Conditionally set the body property
+    ...(body && { body }),
     headers: getResponseHeaders(clone),
     ok: clone.ok,
     redirected: clone.redirected,
@@ -49,9 +44,7 @@ export function evaluateUrlForInterception(url: string, urls: string[]) {
 }
 
 export function generateUrls(forgerockConfig: ForgeRockConfig) {
-  const baseUrl = checkForMissingSlash(
-    forgerockConfig.serverConfig.baseUrl
-  );
+  const baseUrl = checkForMissingSlash(forgerockConfig.serverConfig.baseUrl);
   const realmPath = forgerockConfig?.realmPath || "root";
 
   return {
@@ -153,8 +146,6 @@ export function getRealmUrlPath(realmPath?: string) {
   return urlPath;
 }
 
-type ResponseHeaders = Record<string, string | null>;
-
 export function getResponseHeaders(response: Response) {
   return Array.from(response.headers.keys()).reduce<ResponseHeaders>(
     (acc, key) => {
@@ -164,8 +155,6 @@ export function getResponseHeaders(response: Response) {
     {}
   );
 }
-
-type RequestHeaders = Record<string, string | null>;
 
 export function getRequestHeaders(request: Request) {
   return Array.from(request.headers.keys()).reduce<RequestHeaders>(

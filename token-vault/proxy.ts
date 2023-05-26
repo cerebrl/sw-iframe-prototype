@@ -5,7 +5,7 @@ import {
   getTokens,
 } from "./utils/token.utils";
 import { cloneResponse, generateUrls } from "./utils/network.utils";
-import { ProxyConfig, ResponseClone } from "./interface";
+import { ProxyConfig, ResponseClone, ServerTokens } from "./interface";
 
 export function proxy(config: ProxyConfig) {
   /**
@@ -147,13 +147,47 @@ export function proxy(config: ProxyConfig) {
          * All other requests require the access token to be sent in the Authorization header
          */
 
-        const response = await fetch(request.url, {
+        let response = await fetch(request.url, {
           ...request.options,
           headers: new Headers({
             ...request.options.headers,
             authorization: `Bearer ${tokens ? tokens?.accessToken : ""}`,
           }),
         });
+
+        if (response.status === 401) {
+          // Refresh the Access Token
+          const newTokenResponse = await refreshTokens({
+            clientId,
+            refreshToken: tokens.refreshToken,
+            scope,
+            url: urls.accessToken,
+          });
+
+          let newTokens: ServerTokens | undefined;
+
+          try {
+            // Refresh the Access Token
+            newTokens = await newTokenResponse.json();
+          } catch (error) {
+            newTokens = undefined;
+          }
+
+          if (newTokens && newTokens.access_token) {
+            // Store the new tokens
+            storeTokens(newTokenResponse.clone(), clientId);
+
+            // Recall the request with the new Access Token
+            response = await fetch(request.url, {
+              ...request.options,
+              headers: new Headers({
+                ...request.options.headers,
+                // Use snake case as it's straight from the server
+                authorization: `Bearer ${newTokens.access_token}`,
+              }),
+            });
+          }
+        }
 
         clonedResponse = await cloneResponse(response);
       }

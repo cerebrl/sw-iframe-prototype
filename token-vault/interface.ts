@@ -1,10 +1,13 @@
-import type { ConfigOptions } from "@forgerock/javascript-sdk";
+import type {
+  ConfigOptions,
+  GetOAuth2TokensOptions,
+} from "@forgerock/javascript-sdk";
 
 export type BaseConfig = {
   app: {
     origin: string;
     url: string;
-  },
+  };
   events?: {
     fetch?: string;
     has?: string;
@@ -39,11 +42,29 @@ export interface ForgeRockConfig extends ConfigOptions {
   };
 }
 
+export interface InterceptorConfig {
+  events?: BaseConfig["events"];
+  forgerock: BaseConfig["forgerock"];
+  interceptor: {
+    urls: string[];
+  }
+}
+
 type ProxyConfigInit = Partial<BaseConfig>;
 
 export interface ProxyConfig extends ProxyConfigInit {
   app: BaseConfig["app"];
   forgerock: BaseConfig["forgerock"];
+}
+
+export type RefreshOAuth2TokensOptionsInit = Omit<
+  GetOAuth2TokensOptions,
+  "authorizationCode"
+>;
+export interface RefreshOAuth2TokensOptions
+  extends RefreshOAuth2TokensOptionsInit {
+  refreshToken: string;
+  url: string;
 }
 
 export type ResponseClone = {
@@ -57,6 +78,10 @@ export type ResponseClone = {
   url: string;
 };
 
+export type ResponseHeaders = Record<string, string | null>;
+
+export type RequestHeaders = Record<string, string | null>;
+
 export type ServerTokens = {
   access_token: string;
   expires_in: number;
@@ -64,4 +89,4 @@ export type ServerTokens = {
   refresh_token: string;
   scope: string;
   token_type: string;
-}
+};

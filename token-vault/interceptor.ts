@@ -6,17 +6,9 @@ import {
   getRequestHeaders,
   resolve,
 } from './utils/network.utils';
-import type { BaseConfig } from "./interface";
+import type { InterceptorConfig } from "./interface";
 
 declare const self: ServiceWorkerGlobalScope;
-
-interface InterceptorConfig {
-  events?: BaseConfig["events"];
-  forgerock: BaseConfig["forgerock"];
-  interceptor: {
-    urls: string[];
-  }
-}
 
 export function interceptor(config: InterceptorConfig) {
   /** ****************************************************

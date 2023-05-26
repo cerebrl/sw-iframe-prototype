@@ -1,17 +1,5 @@
-import { GetOAuth2TokensOptions } from "@forgerock/javascript-sdk";
-import { ClientTokens, ServerTokens } from "../interface";
+import { ClientTokens, RefreshOAuth2TokensOptions, ServerTokens } from "../interface";
 import { getBodyJsonOrText, parseError, stringify,  } from "./network.utils";
-/**
- * Exchanges an refresh token for access tokens.
- */
-type RefreshOAuth2TokensOptionsInit = Omit<
-  GetOAuth2TokensOptions,
-  "authorizationCode"
->;
-interface RefreshOAuth2TokensOptions extends RefreshOAuth2TokensOptionsInit {
-  refreshToken: string;
-  url: string;
-}
 
 export function getTokens(clientId: string) {
   const tokensString = localStorage.getItem(clientId);
@@ -94,10 +82,11 @@ export async function requestTokens(request: any): Promise<Response> {
 export async function exchangeCodeForOAuthTokens() {}
 
 export async function storeTokens(response: Response, clientId: string) {
-  // Save original tokens to localStorage
-  const tokenStr = await response.text();
+  const newTokens: ServerTokens | undefined = await response.json();
 
-  const newTokens: ServerTokens = JSON.parse(tokenStr);
+  if (!newTokens) {
+    throw new Error("No tokens found in response");
+  }
 
   let tokenExpiry: number | undefined;
   if (newTokens.expires_in) {
