@@ -53,7 +53,7 @@ export function proxy(config: ProxyConfig) {
       // Check if the Access Token exists
       // DO NOT RETURN THE TOKEN!
       const hasToken = Boolean(tokens.accessToken);
-      responseChannel.postMessage(hasToken);
+      responseChannel.postMessage({ hasToken });
 
       return;
     } else if (requestType === refreshTokenEventName) {
@@ -72,9 +72,7 @@ export function proxy(config: ProxyConfig) {
         });
         storeTokens(response, clientId);
 
-        responseChannel.postMessage(
-          `Tokens for ${clientId} have been refreshed in Token Vault`
-        );
+        responseChannel.postMessage({ refreshToken: true });
 
         return;
       } catch (error) {
@@ -87,9 +85,7 @@ export function proxy(config: ProxyConfig) {
        *******************************************************/
 
       localStorage.removeItem(clientId);
-      responseChannel.postMessage(
-        `Tokens for ${clientId} have been removed from Token Vault`
-      );
+      responseChannel.postMessage({ removeToken: true });
       return;
     } else if (requestType === fetchEventName) {
       /** ****************************************************
@@ -108,7 +104,13 @@ export function proxy(config: ProxyConfig) {
          * The access token endpoint
          */
 
-        const response = await requestTokens(request);
+        let response;
+        try {
+          response = await requestTokens(request);
+        } catch (error) {
+          responseChannel.postMessage(error);
+          return;
+        }
 
         clonedResponse = await cloneResponse(response);
         clonedResponse.body.access_token = "REDACTED";
@@ -124,10 +126,16 @@ export function proxy(config: ProxyConfig) {
         const body = new URLSearchParams(bodyString);
         body.append("token", tokens ? tokens?.accessToken : "");
 
-        const response = await fetch(request.url, {
-          ...request.options,
-          body,
-        });
+        let response;
+        try {
+          response = await fetch(request.url, {
+            ...request.options,
+            body,
+          });
+        } catch (error) {
+          responseChannel.postMessage(error);
+          return;
+        }
 
         clonedResponse = await cloneResponse(response);
       } else if (request.url?.includes("connect/endSession")) {
@@ -139,7 +147,13 @@ export function proxy(config: ProxyConfig) {
         url.searchParams.append("id_token_hint", tokens ? tokens?.idToken : "");
         console.log(url.toString());
 
-        const response = await fetch(url.toString(), request.options);
+        let response;
+        try {
+          response = await fetch(url.toString(), request.options);
+        } catch (error) {
+          responseChannel.postMessage(error);
+          return;
+        }
 
         clonedResponse = await cloneResponse(response);
       } else {
@@ -147,22 +161,37 @@ export function proxy(config: ProxyConfig) {
          * All other requests require the access token to be sent in the Authorization header
          */
 
-        let response = await fetch(request.url, {
-          ...request.options,
-          headers: new Headers({
-            ...request.options.headers,
-            authorization: `Bearer ${tokens ? tokens?.accessToken : ""}`,
-          }),
-        });
+        let response;
+        try {
+          response = await fetch(request.url, {
+            ...request.options,
+            headers: new Headers({
+              ...request.options.headers,
+              authorization: `Bearer ${tokens ? tokens?.accessToken : ""}`,
+            }),
+          });
+        } catch (error) {
+          responseChannel.postMessage(error);
+          return;
+        }
 
+        /**
+         * If the response is a 401, try to refresh the Access Token automatically
+         */
         if (response.status === 401) {
           // Refresh the Access Token
-          const newTokenResponse = await refreshTokens({
-            clientId,
-            refreshToken: tokens.refreshToken,
-            scope,
-            url: urls.accessToken,
-          });
+          let newTokenResponse;
+          try {
+            newTokenResponse = await refreshTokens({
+              clientId,
+              refreshToken: tokens.refreshToken,
+              scope,
+              url: urls.accessToken,
+            });
+          } catch (error) {
+            responseChannel.postMessage(error);
+            return;
+          }
 
           let newTokens: ServerTokens | undefined;
 
@@ -170,7 +199,7 @@ export function proxy(config: ProxyConfig) {
             // Refresh the Access Token
             newTokens = await newTokenResponse.json();
           } catch (error) {
-            newTokens = undefined;
+            // leave newTokens undefined
           }
 
           if (newTokens && newTokens.access_token) {
@@ -178,14 +207,24 @@ export function proxy(config: ProxyConfig) {
             storeTokens(newTokenResponse.clone(), clientId);
 
             // Recall the request with the new Access Token
-            response = await fetch(request.url, {
-              ...request.options,
-              headers: new Headers({
-                ...request.options.headers,
-                // Use snake case as it's straight from the server
-                authorization: `Bearer ${newTokens.access_token}`,
-              }),
-            });
+            try {
+              // Replace the initial `response`
+              response = await fetch(request.url, {
+                ...request.options,
+                headers: new Headers({
+                  ...request.options.headers,
+                  /**
+                   * To avoid re-parsing JSON or re-reading from localStorage,
+                   * we use the new Access Token directly from the response body.
+                   * So, use snake_case as it's the server's format.
+                   */
+                  authorization: `Bearer ${newTokens.access_token}`,
+                }),
+              });
+            } catch (error) {
+              responseChannel.postMessage(error);
+              return;
+            }
           }
         }
 

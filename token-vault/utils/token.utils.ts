@@ -37,11 +37,11 @@ export async function refreshTokens(config: RefreshOAuth2TokensOptions) {
   const response = await fetch(config.url, init);
   const responseBody = await getBodyJsonOrText(response.clone());
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     const message =
       typeof responseBody === "string"
-        ? `Expected 200, received ${response.status}`
-        : parseError(responseBody);
+        ? `${response.status}: ${responseBody}` // Pass plaintext body to client
+        : parseError(responseBody); // Parse JSON body for error message
     throw new Error(message);
   }
 
@@ -63,7 +63,7 @@ export async function requestTokens(request: any): Promise<Response> {
 
   const responseBody = await getBodyJsonOrText(response.clone());
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     const message =
       typeof responseBody === "string"
         ? `Expected 200, received ${response.status}`
@@ -78,8 +78,6 @@ export async function requestTokens(request: any): Promise<Response> {
 
   return response;
 }
-
-export async function exchangeCodeForOAuthTokens() {}
 
 export async function storeTokens(response: Response, clientId: string) {
   const newTokens: ServerTokens | undefined = await response.json();

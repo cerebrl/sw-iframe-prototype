@@ -19,7 +19,7 @@ export async function cloneResponse(response: Response) {
   try {
     body = await getBodyJsonOrText(clone);
   } catch (error) {
-    body = undefined;
+    // Leave body undefined
   }
 
   return {
@@ -36,11 +36,7 @@ export async function cloneResponse(response: Response) {
 }
 
 export function evaluateUrlForInterception(url: string, urls: string[]) {
-  if (url.includes("access_token")) {
-    console.log(`Evaluating ${url}`);
-  }
-  const outcome = urls?.includes(url);
-  return outcome;
+  return urls?.includes(url);
 }
 
 export function generateUrls(forgerockConfig: ForgeRockConfig) {
