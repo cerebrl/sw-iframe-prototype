@@ -1,13 +1,13 @@
 import { ClientTokens, RefreshOAuth2TokensOptions, ServerTokens } from "../interface";
-import { getBodyJsonOrText, parseError, stringify,  } from "./network.utils";
+import { stringify } from "./network.utils";
 
-export function getTokens(clientId: string) {
+export function getTokens(clientId: string): ClientTokens | undefined {
   const tokensString = localStorage.getItem(clientId);
   let tokens;
 
   if (tokensString) {
     try {
-      tokens = JSON.parse(tokensString) || {};
+      tokens = JSON.parse(tokensString) || undefined;
     } catch (error) {
       // TODO: Handle error more intelligently
     }
@@ -16,7 +16,7 @@ export function getTokens(clientId: string) {
   return tokens;
 }
 
-export async function refreshTokens(config: RefreshOAuth2TokensOptions) {
+export async function refreshTokens(config: RefreshOAuth2TokensOptions): Promise<Response> {
   const requestParams = {
     client_id: config.clientId || "",
     grant_type: "refresh_token",
@@ -35,46 +35,6 @@ export async function refreshTokens(config: RefreshOAuth2TokensOptions) {
   };
 
   const response = await fetch(config.url, init);
-  const responseBody = await getBodyJsonOrText(response.clone());
-
-  if (!response.ok) {
-    const message =
-      typeof responseBody === "string"
-        ? `${response.status}: ${responseBody}` // Pass plaintext body to client
-        : parseError(responseBody); // Parse JSON body for error message
-    throw new Error(message);
-  }
-
-  const responseObject: ServerTokens = responseBody;
-  if (!responseObject.access_token) {
-    throw new Error("Access token not found in response");
-  }
-
-  return response;
-}
-
-export async function requestTokens(request: any): Promise<Response> {
-  const response = await fetch(request.url, {
-    ...request.options,
-    headers: new Headers({
-      ...request.options.headers,
-    }),
-  });
-
-  const responseBody = await getBodyJsonOrText(response.clone());
-
-  if (!response.ok) {
-    const message =
-      typeof responseBody === "string"
-        ? `Expected 200, received ${response.status}`
-        : parseError(responseBody);
-    throw new Error(message);
-  }
-
-  const responseObject: ServerTokens = responseBody;
-  if (!responseObject.access_token) {
-    throw new Error("Access token not found in response");
-  }
 
   return response;
 }

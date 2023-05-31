@@ -2,7 +2,7 @@ import {
   ConfigurablePaths,
   CustomPathConfig,
 } from "@forgerock/javascript-sdk/src/config/interfaces";
-import { ForgeRockConfig, RequestHeaders, ResponseHeaders } from "../interface";
+import { ForgeRockConfig, ResponseClone, RequestHeaders, ResponseHeaders } from "../interface";
 
 export function checkForMissingSlash(url: string) {
   if (url && url.charAt(url.length - 1) !== "/") {
@@ -11,7 +11,7 @@ export function checkForMissingSlash(url: string) {
   return url;
 }
 
-export async function cloneResponse(response: Response) {
+export async function cloneResponse(response: Response): Promise<ResponseClone> {
   // Clone and redact the response
   const clone = response.clone();
 
@@ -32,6 +32,29 @@ export async function cloneResponse(response: Response) {
     statusText: clone.statusText,
     type: clone.type,
     url: clone.url,
+  };
+}
+
+export function createErrorResponse(type: "fetch_error" | "no_tokens", error: unknown) {
+  const message = error instanceof Error ? error.message : "Unknown error";
+
+  return {
+    body: {
+      error: type,
+      message: message,
+    },
+    headers: { 'content-type': 'application/json' },
+    ok: false,
+    redirected: false,
+    type: "error",
+    /**
+     * Using the status code of 0 to indicate an opaque network error
+     * error without a server response.
+     *
+     * https://fetch.spec.whatwg.org/#concept-network-error
+     */
+    status: 400,
+    statusText: "Token Vault Proxy Error",
   };
 }
 
@@ -160,18 +183,6 @@ export function getRequestHeaders(request: Request) {
     },
     {}
   );
-}
-
-export function parseError(json: Record<string, unknown>): string | undefined {
-  if (json) {
-    if (json.error && json.error_description) {
-      return `${json.error}: ${json.error_description}`;
-    }
-    if (json.code && json.message) {
-      return `${json.code}: ${json.message}`;
-    }
-  }
-  return undefined;
 }
 
 export function parseQuery(fullUrl: string) {

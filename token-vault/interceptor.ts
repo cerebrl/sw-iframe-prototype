@@ -75,13 +75,7 @@ export function interceptor(config: InterceptorConfig) {
           ]);
           proxyChannel.port1.onmessage = (messageEvent) => {
             console.log(`Returning ${url}`);
-            let response;
-
-            try {
-              response = JSON.parse(messageEvent.data);
-            } catch (error) {
-              return reject(`Error parsing response in interceptor: ${error}`);
-            }
+            let response = messageEvent.data;
 
             // Create a new response from the response body and headers
             // The body, first argument, needs to be converted back to string
