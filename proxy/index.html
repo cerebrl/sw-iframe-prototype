@@ -4,72 +4,8 @@
     <title>Identity Proxy</title>
     <link rel="icon" href="favicon.ico" />
   </head>
+
   <body>
-    <script>
-      let clientId;
-      let swChannel;
-
-      window.addEventListener("message", async (event) => {
-        swChannel = event.ports[0];
-
-        if (event.data?.type === "SET_TOKENS") {
-          /** ****************************************************
-           * SET TOKENS
-           */
-
-          clientId = event.data.clientId;
-
-          localStorage.setItem(
-            event.data.clientId,
-            JSON.stringify(event.data?.tokens)
-          );
-          swChannel.postMessage(
-            `Tokens for ${event.data.clientId} have been set in localStorage`
-          );
-          return;
-        } else if (event.data?.type === "REMOVE_TOKENS") {
-          /** ****************************************************
-           * REMOVE TOKENS
-           */
-
-          localStorage.removeItem(event.data.clientId);
-          swChannel.postMessage(
-            `Tokens for ${event.data.clientId} have been removed from localStorage`
-          );
-          return;
-        } else if (event.data?.type === "FETCH_RESOURCE") {
-          /** ****************************************************
-           * FETCH RESOURCE
-           */
-
-          const request = event.data.request;
-          const tokensString = localStorage.getItem("WebOAuthClient");
-          const tokens = JSON.parse(tokensString) || { accessToken: "test" };
-
-          let response;
-
-          if (request.url.includes("token/revoke")) {
-            const bodyString = await request.options.body.text();
-            const body = new URLSearchParams(bodyString);
-            body.append("token", tokens.accessToken);
-
-            response = await fetch(request.url, {
-              ...request.options,
-              body,
-            });
-          } else {
-            response = await fetch(request.url, {
-              ...request.options,
-              headers: new Headers({
-                ...request.options.headers,
-                authorization: `Bearer ${tokens.accessToken}`,
-              }),
-            });
-          }
-          const json = await response.json();
-          swChannel.postMessage(json);
-        }
-      });
-    </script>
+    <script type="module" src="./index.ts"></script>
   </body>
 </html>

@@ -1,1 +1,0 @@
-{"version":3,"file":"helpers.js","sourceRoot":"","sources":["../../src/token-manager/helpers.ts"],"names":[],"mappings":"AAAA;;;;;;;;GAQG;AAEH;;;;GAIG;AAEH,MAAM,UAAU,+BAA+B,CAC7C,cAAuB,EACvB,WAAoB;IAEpB,IAAI,cAAc,IAAI,WAAW,EAAE;QACjC,OAAO,WAAW,GAAG,cAAc,GAAG,IAAI,CAAC,GAAG,EAAE,CAAC;KAClD;IACD,OAAO,KAAK,CAAC;AACf,CAAC"}
